@@ -1,0 +1,92 @@
+[
+    {
+        "fullName": "Michael Green",
+        "userName": "mikeg",
+        "email": "mikeg@example.com",
+        "password": "password234",
+        "activationCode": "DEF234",
+        "status": "active",
+        "role": "employer"
+    },
+    {
+        "fullName": "Laura White",
+        "userName": "lauraw",
+        "email": "lauraw@example.com",
+        "password": "password567",
+        "activationCode": "HIJ890",
+        "status": "inactive",
+        "role": "employer"
+    },
+    {
+        "fullName": "Alice Johnson",
+        "userName": "alicej",
+        "email": "alicej@example.com",
+        "password": "password789",
+        "activationCode": "LMN456",
+        "status": "active",
+        "role": "employer"
+    },
+    {
+        "fullName": "John Doe",
+        "userName": "johndoe",
+        "email": "johndoe@example.com",
+        "password": "password123",
+        "activationCode": "ABC123",
+        "status": "active",
+        "role": "user"
+    },
+    {
+        "fullName": "Jane Smith",
+        "userName": "janesmith",
+        "email": "janesmith@example.com",
+        "password": "password456",
+        "activationCode": "XYZ789",
+        "status": "inactive",
+        "role": "user"
+    },
+    {
+        "fullName": "Bob Brown",
+        "userName": "bobbrown",
+        "email": "bobbrown@example.com",
+        "password": "password101",
+        "activationCode": "QRS987",
+        "status": "active",
+        "role": "user"
+    },
+    {
+        "fullName": "Emily Davis",
+        "userName": "emilyd",
+        "email": "emilyd@example.com",
+        "password": "password102",
+        "activationCode": null,
+        "status": "pending",
+        "role": "user"
+    },
+    {
+        "fullName": "Chris Blue",
+        "userName": "chrisb",
+        "email": "chrisb@example.com",
+        "password": "password345",
+        "activationCode": "OPQ654",
+        "status": "active",
+        "role": "user"
+    },
+    {
+        "fullName": "Samantha Black",
+        "userName": "samblack",
+        "email": "samblack@example.com",
+        "password": "password678",
+        "activationCode": "TUV321",
+        "status": "pending",
+        "role": "user"
+    },
+    {
+        "fullName": "David Silver",
+        "userName": "davids",
+        "email": "davids@example.com",
+        "password": "password890",
+        "activationCode": "WXZ567",
+        "status": "inactive",
+        "role": "user"
+    }
+]

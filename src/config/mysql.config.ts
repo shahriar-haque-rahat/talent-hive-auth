@@ -14,4 +14,4 @@ export const mysqlConfig: TypeOrmModuleOptions = {
     synchronize: true,
 };
 
-export default null;
+export default mysqlConfig;
