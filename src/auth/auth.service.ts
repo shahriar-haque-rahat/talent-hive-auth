@@ -13,6 +13,8 @@ import { UserRefreshDto } from './dto/user-refresh.dto';
 import { jwtConfig } from 'src/config/jwt.config';
 import { UserLoginDto } from './dto/user-login.dto';
 import { VerifyRequest } from 'src/middleware/verify.middleware';
+import { UserForgotPasswordDto } from './dto/user-forgotpassword.dto';
+import { UserResetPasswordDto } from './dto/user-resertpassword.dto';
 
 @Injectable()
 export class AuthService {
@@ -299,11 +301,11 @@ export class AuthService {
         }
     }
 
-    async forgotPassword() {
+    async forgotPassword(userForgotPasswordDto: UserForgotPasswordDto) {
 
     }
 
-    async resetPassword() {
+    async resetPassword(userResetPasswordDto: UserResetPasswordDto) {
 
     }
 };
