@@ -9,6 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Session } from 'src/types/auth.types';
 import { UserVerifyDto } from './dto/user-verify.dto';
+import { UserRefreshDto } from './dto/user-refresh.dto';
+import { jwtConfig } from 'src/config/jwt.config';
+import { UserLoginDto } from './dto/user-login.dto';
+import { VerifyRequest } from 'src/middleware/verify.middleware';
 
 @Injectable()
 export class AuthService {
@@ -134,6 +138,7 @@ export class AuthService {
     async accountActive(userVerifyDto: UserVerifyDto) {
         try {
             const { token } = userVerifyDto || {};
+
             const decoded = await this.jwtService.verify(token, {
                 secret: process.env.JWT_SECRET_KEY,
             });
@@ -143,18 +148,23 @@ export class AuthService {
             };
 
             const { id } = decoded;
+
             const currentDate = Math.floor(Date.now() / 1000);
+
             const isExpired = decoded.exp < currentDate;
+
             if (isExpired) {
-                throw new UnauthorizedException('Unauthorize access');
+                throw new UnauthorizedException('Token Expired!');
             };
 
             const redisToken = await this.cacheManager.get(`${id}_email_activation_token`);
+
             if (!redisToken || token != redisToken) {
                 throw new UnauthorizedException('Unauthorize access');
             };
 
             const user = await this.userRepository.findOneBy(id);
+
             if (!user?.status && user?.status === 'activated') {
                 throw new BadRequestException('User already activated');
             };
@@ -170,7 +180,9 @@ export class AuthService {
             };
 
             const { accessToken, refreshToken } = this.accessAndRefreshToken(payload);
+
             await this.saveToken(decoded?.id, accessToken, refreshToken);
+
             await this.cacheManager.del(`${id}_email_activation_token`);
 
             return { accessToken, refreshToken, user: payload };
@@ -181,5 +193,117 @@ export class AuthService {
                 description: error.message,
             });
         }
+    }
+
+    async tokenRefresh(userRefreshDto: UserRefreshDto) {
+        try {
+            const { refreshToken } = userRefreshDto;
+
+            const decoded = await this.jwtService.verify(refreshToken, {
+                secret: jwtConfig.secret,
+            });
+
+            if (!decoded) {
+                throw new UnauthorizedException('Unauthorize Access');
+            };
+
+            const refreshTokenFromCache = await this.cacheManager.get(
+                `${decoded.id}_refresh_token`,
+            );
+
+            if (!refreshTokenFromCache || refreshToken !== refreshTokenFromCache) {
+                throw new UnauthorizedException('Unauthorize Access');
+            };
+
+            const decodedFromCache = await this.jwtService.verify(refreshTokenFromCache, {
+                secret: jwtConfig.secret,
+            });
+
+            const currentDate = Math.floor(Date.now() / 1000);
+
+            const isExpired = decodedFromCache?.exp < currentDate;
+
+            if (!decodedFromCache || isExpired) {
+                throw new UnauthorizedException('Unauthorize Access');
+            }
+
+            const payload = {
+                id: decodedFromCache?.id,
+                email: decodedFromCache?.email,
+                fullName: decodedFromCache?.fullName
+            };
+
+            const { accessToken, refreshToken: newRefreshToken } = this.accessAndRefreshToken(payload);
+
+            return { accessToken, refreshToken: newRefreshToken };
+        }
+        catch (error) {
+            throw new InternalServerErrorException('Unable to refresh token', {
+                cause: new Error(),
+                description: error.message,
+            });
+        }
+    }
+
+    async login(userLoginDto: UserLoginDto) {
+        try {
+            const { email, password } = userLoginDto;
+
+            const user = await this.userRepository.findOneBy({ email });
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            };
+
+            if (user.status != 'activated') {
+                throw new UnauthorizedException('User not activated!');
+            };
+
+            const correctPassword = await bcrypt.compare(password, user.password);
+
+            if (!correctPassword) {
+                throw new UnauthorizedException('Invalid password');
+            };
+
+            const payload: Session = {
+                id: `${user.id}`,
+                email: user.email,
+                fullName: user.fullName
+            };
+
+            const { accessToken, refreshToken } = this.accessAndRefreshToken(payload);
+
+            await this.saveToken(user.id, accessToken, refreshToken);
+
+            return { success: true, accessToken, refreshToken };
+        }
+        catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async logout(req: VerifyRequest) {
+        try {
+            const user: Session = req.user;
+
+            await this.cacheManager.del(`${user?.id}_access_token`);
+            await this.cacheManager.del(`${user?.id}_refresh_token`);
+
+            return { status: true };
+        }
+        catch (error) {
+            throw new InternalServerErrorException('Unable to logout', {
+                cause: new Error(),
+                description: error.message,
+            });
+        }
+    }
+
+    async forgotPassword() {
+
+    }
+
+    async resetPassword() {
+
     }
 };
