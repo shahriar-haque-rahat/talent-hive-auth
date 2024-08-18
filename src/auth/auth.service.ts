@@ -302,10 +302,100 @@ export class AuthService {
     }
 
     async forgotPassword(userForgotPasswordDto: UserForgotPasswordDto) {
+        try {
+            const { email } = userForgotPasswordDto;
 
+            const user = await this.userRepository.findOneBy({ email });
+
+            if (!user) {
+                throw new NotFoundException('User does not exist.');
+            };
+
+            if (user?.status !== 'active') {
+                throw new BadRequestException('User account not activated!');
+            };
+
+            const payload = {
+                id: user.id,
+                email: user.email
+            };
+
+            const token = this.jwtService.sign(payload, {
+                expiresIn: '1h'
+            });
+
+            await this.cacheManager.set(
+                `${user.id}_reset_password_token`,
+                token,
+                this.hourExpire
+            );
+
+            const resetPasswordLink = `${process.env.ORIGIN_URL}/reset_password?token=${token}`;
+
+            await this.sendMail(
+                `Click the link below to reset you password = ${resetPasswordLink}`,
+                email,
+                `Reset Password`
+            );
+
+            return {
+                status: true,
+                message: `Password reset link sent`
+            };
+        }
+        catch (error: any) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to process password reset request',
+            );
+        }
     }
 
     async resetPassword(userResetPasswordDto: UserResetPasswordDto) {
+        try {
+            const { token, newPassword } = userResetPasswordDto;
 
+            const decoded = await this.jwtService.verify(token, {
+                secret: jwtConfig.secret
+            });
+
+            const currentDate = Math.floor(Date.now() / 1000);
+
+            const isExpired = decoded.exp < currentDate;
+
+            if (isExpired) {
+                throw new BadRequestException('Token expired');
+            };
+
+            const tokenFromCache = await this.cacheManager.get(`${decoded.id}_reset_password_token`);
+
+            if (tokenFromCache != token) {
+                throw new BadRequestException('Invalid token');
+            };
+
+            const user = await this.userRepository.findOneBy({ id: decoded.id });
+
+            if (!user) {
+                throw new NotFoundException('User not found.');
+            };
+
+            const hashedPass = await bcrypt.hash(newPassword, 10);
+
+            await this.userRepository.update(decoded.id, {
+                password: hashedPass,
+                modifiedOn: new Date()
+            });
+
+            await this.cacheManager.del(`${decoded.id}_reset_password_token`);
+
+            return {
+                status: true,
+                message: 'Password changed'
+            };
+        }
+        catch (error: any) {
+            throw new InternalServerErrorException(
+                error.message || 'Password reset failed',
+            );
+        }
     }
 };
