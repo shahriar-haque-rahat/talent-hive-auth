@@ -18,8 +18,8 @@ import { UserResetPasswordDto } from './dto/user-resertpassword.dto';
 
 @Injectable()
 export class AuthService {
-    private readonly sevenDaysExpire = 7 * 24 * 60 * 60;
-    private readonly hourExpire = 3600;
+    private readonly sevenDaysExpire = 7 * 24 * 60 * 60 * 1000;
+    private readonly hourExpire = 60 * 60 * 1000;
 
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
@@ -120,7 +120,7 @@ export class AuthService {
                 `${saveResponse?.id}_email_activation_token`,
                 token,
                 this.hourExpire,
-            )
+            );
 
             await this.sendMail(
                 `Click to confirm ${process.env.ORIGIN_URL}/login?token=${token}`,
@@ -145,7 +145,7 @@ export class AuthService {
                 secret: process.env.JWT_SECRET_KEY,
             });
 
-            if (decoded) {
+            if (!decoded) {
                 throw new UnauthorizedException('Unauthorize access');
             };
 
@@ -167,12 +167,12 @@ export class AuthService {
 
             const user = await this.userRepository.findOneBy(id);
 
-            if (!user?.status && user?.status === 'activated') {
-                throw new BadRequestException('User already activated');
+            if (!user?.status && user?.status === 'active') {
+                throw new BadRequestException('User already active');
             };
 
             await this.userRepository.update(id, {
-                status: 'activated'
+                status: 'active'
             });
 
             const payload = {
@@ -257,8 +257,8 @@ export class AuthService {
                 throw new NotFoundException('User not found');
             };
 
-            if (user.status != 'activated') {
-                throw new UnauthorizedException('User not activated!');
+            if (user.status != 'active') {
+                throw new UnauthorizedException('User not active!');
             };
 
             const correctPassword = await bcrypt.compare(password, user.password);
