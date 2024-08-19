@@ -25,11 +25,6 @@ export class UserRegisterDto {
     readonly password: string;
 
     @IsOptional()
-    @IsString({ message: 'Activation Code must be a string' })
-    @MaxLength(40, { message: 'Activation Code cannot exceed 40 characters' })
-    readonly activationCode?: string;
-
-    @IsOptional()
     @IsString({ message: 'Status must be a string' })
     @MaxLength(40, { message: 'Status cannot exceed 40 characters' })
     readonly status?: string;

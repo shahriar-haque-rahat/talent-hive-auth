@@ -20,9 +20,6 @@ export class User {
     password: string;    
 
     @Column({ type: 'varchar', length: 40, nullable: true })
-    activationCode: string;
-
-    @Column({ type: 'varchar', length: 40, nullable: true })
     status: string;
 
     // TODO: has to make it as a drop-down selection
