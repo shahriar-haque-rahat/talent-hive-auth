@@ -46,7 +46,7 @@ export class AuthService {
                 expiresIn: '7d'
             });
 
-            return { accessToken, refreshToken };
+            return { success: true, accessToken, refreshToken };
         }
         catch (error) {
             throw new BadRequestException('Invalid token');
@@ -76,10 +76,11 @@ export class AuthService {
                 throw new NotFoundException('User not found');
             }
 
-            return { status: true, data: user };
+            return { success: true, data: user };
         }
         catch (error) {
-            throw new InternalServerErrorException('Unable to get session data');
+            throw new InternalServerErrorException(
+                error.message || 'Failed to get session data');
         }
     }
 
@@ -130,10 +131,9 @@ export class AuthService {
             return saveResponse;
         }
         catch (error) {
-            throw new InternalServerErrorException('Unable register', {
-                cause: new Error(),
-                description: error.message,
-            });
+            throw new InternalServerErrorException(
+                error.message || 'Failed to register'
+            );
         }
     }
 
@@ -187,13 +187,12 @@ export class AuthService {
 
             await this.cacheManager.del(`${id}_email_activation_token`);
 
-            return { accessToken, refreshToken, user: payload };
+            return { success: true, accessToken, refreshToken, user: payload };
         }
         catch (error) {
-            throw new InternalServerErrorException('Unable to activate the user', {
-                cause: new Error(),
-                description: error.message,
-            });
+            throw new InternalServerErrorException(
+                error.message || 'Failed to account active'
+            );
         }
     }
 
@@ -237,13 +236,11 @@ export class AuthService {
 
             const { accessToken, refreshToken: newRefreshToken } = this.accessAndRefreshToken(payload);
 
-            return { accessToken, refreshToken: newRefreshToken };
+            return { success: true, accessToken, refreshToken: newRefreshToken };
         }
         catch (error) {
-            throw new InternalServerErrorException('Unable to refresh token', {
-                cause: new Error(),
-                description: error.message,
-            });
+            throw new InternalServerErrorException(
+                error.message || 'Failed to refresh token');
         }
     }
 
@@ -280,7 +277,9 @@ export class AuthService {
             return { success: true, accessToken, refreshToken };
         }
         catch (error) {
-            throw new InternalServerErrorException(error.message);
+            throw new InternalServerErrorException(
+                error.message || 'Failed to login'
+            );
         }
     }
 
@@ -291,13 +290,12 @@ export class AuthService {
             await this.cacheManager.del(`${user?.id}_access_token`);
             await this.cacheManager.del(`${user?.id}_refresh_token`);
 
-            return { status: true };
+            return { success: true, status: true };
         }
         catch (error) {
-            throw new InternalServerErrorException('Unable to logout', {
-                cause: new Error(),
-                description: error.message,
-            });
+            throw new InternalServerErrorException(
+                error.message || 'Failed to logout'
+            );
         }
     }
 
@@ -339,13 +337,13 @@ export class AuthService {
             );
 
             return {
-                status: true,
+                success: true,
                 message: `Password reset link sent`
             };
         }
         catch (error: any) {
             throw new InternalServerErrorException(
-                error.message || 'Unable to process password reset request',
+                error.message || 'Failed to process password reset request',
             );
         }
     }
@@ -388,13 +386,13 @@ export class AuthService {
             await this.cacheManager.del(`${decoded.id}_reset_password_token`);
 
             return {
-                status: true,
+                success: true,
                 message: 'Password changed'
             };
         }
         catch (error: any) {
             throw new InternalServerErrorException(
-                error.message || 'Password reset failed',
+                error.message || 'Failed to reset password',
             );
         }
     }

@@ -17,12 +17,11 @@ export class User {
     email: string;
 
     @Column({ type: 'varchar', length: 255, nullable: false })
-    password: string;    
+    password: string;
 
     @Column({ type: 'varchar', length: 40, nullable: true })
     status: string;
 
-    // TODO: has to make it as a drop-down selection
     @Column({ type: 'varchar', length: 40, nullable: true })
     role: string;
 

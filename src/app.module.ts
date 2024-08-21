@@ -23,7 +23,7 @@ import { cacheConfig } from './config/cache.config';
     JwtModule.register(jwtConfig),
     CacheModule.register(cacheConfig)
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule { }
