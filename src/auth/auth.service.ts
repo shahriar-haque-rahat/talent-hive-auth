@@ -328,7 +328,7 @@ export class AuthService {
                 this.hourExpire
             );
 
-            const resetPasswordLink = `${process.env.ORIGIN_URL}/reset_password?token=${token}`;
+            const resetPasswordLink = `${process.env.ORIGIN_URL}/reset-password?token=${token}`;
 
             await this.sendMail(
                 `Click the link below to reset you password = ${resetPasswordLink}`,
