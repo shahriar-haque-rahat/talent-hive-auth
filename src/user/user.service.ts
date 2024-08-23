@@ -9,9 +9,26 @@ export class UserService {
         @InjectRepository(User) private userRepository: Repository<User>,
     ) { }
 
-    async findUserById(id: number) {
+    async findAllUser() {
         try {
-            const user = await this.userRepository.findOneBy({ id });
+            const users = await this.userRepository.find();
+
+            if (!users) {
+                throw new NotFoundException('No user found');
+            };
+
+            return users;
+        }
+        catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to get the user'
+            );
+        }
+    }
+
+    async findUserById(uid: string) {
+        try {
+            const user = await this.userRepository.findOneBy({ uid });
 
             if (!user) {
                 throw new NotFoundException('User not found');

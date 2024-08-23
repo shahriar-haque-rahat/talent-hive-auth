@@ -7,6 +7,9 @@ export class User {
     @PrimaryGeneratedColumn({ type: 'mediumint', unsigned: true, comment: 'User ID' })
     id: number;
 
+    @Column({ type: 'varchar', length: 40, nullable: false })
+    uid: string;
+
     @Column({ type: 'varchar', length: 100, nullable: false })
     fullName: string;
 
