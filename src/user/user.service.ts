@@ -11,7 +11,7 @@ export class UserService {
 
     async findAllUser() {
         try {
-            const users = await this.userModel.find().exec();
+            const users = await this.userModel.find().select('-password').exec();
 
             if (!users) {
                 throw new NotFoundException('No user found');
@@ -26,9 +26,9 @@ export class UserService {
         }
     }
 
-    async findUserById(uid: string) {
+    async findUserById(id: string) {
         try {
-            const user = await this.userModel.findOne({ uid }).exec();
+            const user = await this.userModel.findById(id).select('-password').exec();
 
             if (!user) {
                 throw new NotFoundException('User not found');
