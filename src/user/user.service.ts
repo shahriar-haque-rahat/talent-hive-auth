@@ -1,17 +1,17 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './user.sql.entity';
-import { Repository } from 'typeorm';
+import { User } from './user.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class UserService {
     constructor(
-        @InjectRepository(User) private userRepository: Repository<User>,
+        @InjectModel(User.name) private userModel: Model<User>,
     ) { }
 
     async findAllUser() {
         try {
-            const users = await this.userRepository.find();
+            const users = await this.userModel.find().exec();
 
             if (!users) {
                 throw new NotFoundException('No user found');
@@ -28,7 +28,7 @@ export class UserService {
 
     async findUserById(uid: string) {
         try {
-            const user = await this.userRepository.findOneBy({ uid });
+            const user = await this.userModel.findOne({ uid }).exec();
 
             if (!user) {
                 throw new NotFoundException('User not found');

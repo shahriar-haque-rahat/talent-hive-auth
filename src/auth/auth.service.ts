@@ -1,7 +1,4 @@
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { User } from 'src/user/user.sql.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UserRegisterDto } from './dto/user-register.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -15,6 +12,9 @@ import { UserLoginDto } from './dto/user-login.dto';
 import { VerifyRequest } from 'src/middleware/verify.middleware';
 import { UserForgotPasswordDto } from './dto/user-forgotpassword.dto';
 import { UserResetPasswordDto } from './dto/user-resertpassword.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/user/user.schema';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +22,7 @@ export class AuthService {
     private readonly hourExpire = 60 * 60 * 1000;
 
     constructor(
-        @InjectRepository(User) private userRepository: Repository<User>,
+        @InjectModel(User.name) private userModel: Model<User>,
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
         private jwtService: JwtService,
         private mailerService: MailerService
@@ -70,7 +70,7 @@ export class AuthService {
     async session(session: Session) {
         try {
             const { id } = session || {};
-            const user = await this.userRepository.findOneBy({ id: +id });
+            const user = await this.userModel.findById(id).exec();
 
             if (user) {
                 throw new NotFoundException('User not found');
@@ -88,7 +88,7 @@ export class AuthService {
         try {
             const { email, password, ...restUser } = userRegisterDto;
 
-            const isExist = await this.userRepository.findOneBy({ email: email })
+            const isExist = await this.userModel.findOne({ email }).exec();
 
             if (isExist) {
                 throw new BadRequestException('User Already Registered', {
@@ -99,13 +99,13 @@ export class AuthService {
 
             const hashedPass = await bcrypt.hash(password, 10);
 
-            const user = this.userRepository.create({
+            const user = new this.userModel({
                 email,
                 password: hashedPass,
                 ...restUser,
             });
-
-            const saveResponse = await this.userRepository.save(user);
+    
+            const saveResponse = await user.save();
 
             const payload = {
                 id: saveResponse?.id,
@@ -165,15 +165,13 @@ export class AuthService {
                 throw new UnauthorizedException('Unauthorize access');
             };
 
-            const user = await this.userRepository.findOneBy(id);
+            const user = await this.userModel.findById(id).exec();
 
             if (!user?.status && user?.status === 'active') {
                 throw new BadRequestException('User already active');
             };
 
-            await this.userRepository.update(id, {
-                status: 'active'
-            });
+            await this.userModel.findByIdAndUpdate(id, { status: 'active' }).exec();
 
             const payload = {
                 id: decoded?.id,
@@ -248,7 +246,7 @@ export class AuthService {
         try {
             const { email, password } = userLoginDto;
 
-            const user = await this.userRepository.findOneBy({ email });
+            const user = await this.userModel.findOne({ email }).exec();
 
             if (!user) {
                 throw new NotFoundException('User not found');
@@ -303,7 +301,7 @@ export class AuthService {
         try {
             const { email } = userForgotPasswordDto;
 
-            const user = await this.userRepository.findOneBy({ email });
+            const user = await this.userModel.findOne({ email }).exec();
 
             if (!user) {
                 throw new NotFoundException('User does not exist.');
@@ -370,7 +368,7 @@ export class AuthService {
                 throw new BadRequestException('Invalid token');
             };
 
-            const user = await this.userRepository.findOneBy({ id: decoded.id });
+            const user = await this.userModel.findById(decoded.id).exec();
 
             if (!user) {
                 throw new NotFoundException('User not found.');
@@ -378,10 +376,10 @@ export class AuthService {
 
             const hashedPass = await bcrypt.hash(newPassword, 10);
 
-            await this.userRepository.update(decoded.id, {
+            await this.userModel.findByIdAndUpdate(decoded.id, {
                 password: hashedPass,
                 modifiedOn: new Date()
-            });
+            }).exec();
 
             await this.cacheManager.del(`${decoded.id}_reset_password_token`);
 

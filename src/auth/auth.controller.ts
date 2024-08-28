@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Post, Put, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserRegisterDto } from './dto/user-register.dto';
-import { User } from 'src/user/user.sql.entity';
 import { VerifyRequest } from 'src/middleware/verify.middleware';
 import { UserRefreshDto } from './dto/user-refresh.dto';
 import { UserVerifyDto } from './dto/user-verify.dto';
 import { UserLoginDto } from './dto/user-login.dto';
 import { UserForgotPasswordDto } from './dto/user-forgotpassword.dto';
 import { UserResetPasswordDto } from './dto/user-resertpassword.dto';
+import { User } from 'src/user/user.schema';
 
 @Controller('auth')
 export class AuthController {
