@@ -42,4 +42,21 @@ export class UserService {
             );
         }
     }
+
+    async findUserByUid(uid: string) {
+        try {
+            const user = await this.userModel.findOne({ uid }).select('-password').exec();
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            };
+
+            return user;
+        }
+        catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to get the user'
+            );
+        }
+    }
 }
