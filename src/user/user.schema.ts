@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class User extends Document {
-    @Prop({ required: true, maxlength: 40 })
+    @Prop({ required: true, maxlength: 40, unique: true, default: () => `u${Date.now()}${Math.floor(100 + Math.random() * 900)}` })
     uid: string;
 
     @Prop({ required: true, maxlength: 100 })
@@ -35,7 +35,7 @@ export class User extends Document {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 // Optional: Pre-save hook to automatically update the modifiedOn field
-UserSchema.pre('save', function(next) {
+UserSchema.pre('save', function (next) {
     this.modifiedOn = new Date();
     next();
 });
