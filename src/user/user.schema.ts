@@ -31,10 +31,9 @@ export class User extends Document {
     modifiedOn?: Date;
 }
 
-// Create the schema for the User class
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// Optional: Pre-save hook to automatically update the modifiedOn field
+// Pre-save hook to automatically update the modifiedOn field
 UserSchema.pre('save', function (next) {
     this.modifiedOn = new Date();
     next();
