@@ -3,9 +3,6 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class User extends Document {
-    @Prop({ required: true, maxlength: 40, unique: true, default: () => `u${Date.now()}${Math.floor(100 + Math.random() * 900)}` })
-    uid: string;
-
     @Prop({ required: true, maxlength: 100 })
     fullName: string;
 
