@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class User extends Document {
     @Prop({ required: true, maxlength: 100 })
     fullName: string;
@@ -20,18 +20,6 @@ export class User extends Document {
 
     @Prop({ maxlength: 40, default: null })
     role?: string;
-
-    @Prop({ default: new Date() })
-    createdOn?: Date;
-
-    @Prop({ default: new Date() })
-    modifiedOn?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-
-// Pre-save hook to automatically update the modifiedOn field
-UserSchema.pre('save', function (next) {
-    this.modifiedOn = new Date();
-    next();
-});

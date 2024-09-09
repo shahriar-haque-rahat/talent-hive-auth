@@ -378,7 +378,7 @@ export class AuthService {
 
             await this.userModel.findByIdAndUpdate(decoded.id, {
                 password: hashedPass,
-                modifiedOn: new Date()
+                updatedAt: new Date()
             }).exec();
 
             await this.cacheManager.del(`${decoded.id}_reset_password_token`);
