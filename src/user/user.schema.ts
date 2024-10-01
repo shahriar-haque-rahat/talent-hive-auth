@@ -20,6 +20,12 @@ export class User extends Document {
 
     @Prop({ maxlength: 40, default: null })
     role?: string;
+
+    @Prop({ default: null })
+    profileImage?: string;
+
+    @Prop({ default: null })
+    designation?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

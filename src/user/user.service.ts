@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { User } from './user.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as natural from 'natural';
 
 @Injectable()
 export class UserService {
@@ -9,19 +10,60 @@ export class UserService {
         @InjectModel(User.name) private userModel: Model<User>,
     ) { }
 
-    async findAllUser() {
+    async findAllUser(id: string, limit: number, page: number) {
         try {
-            const users = await this.userModel.find().select('-password').exec();
+            const skip = page * limit;
 
-            if (!users) {
-                throw new NotFoundException('No user found');
-            };
+            const currentUser = await this.userModel.findById(id).select('designation').exec();
 
-            return users;
+            if (!currentUser) {
+                throw new NotFoundException('Logged-in user not found');
+            }
+
+            const designation = currentUser.designation;
+
+            const users = await this.userModel
+                .find({ _id: { $ne: id } })
+                .select('-password')
+                .skip(skip)
+                .limit(limit)
+                .exec();
+
+            let usersWithSimilarity = users.map(user => {
+                if (!user.designation) {
+                    return { user, similarity: 0 };
+                }
+
+                const similarity = natural.JaroWinklerDistance(user.designation, designation);
+                return { user, similarity };
+            });
+
+            let filteredUsers = usersWithSimilarity.filter(item => item.similarity > 0.7);
+
+            if (filteredUsers.length < limit) {
+                usersWithSimilarity.sort((a, b) => b.similarity - a.similarity);
+
+                filteredUsers = usersWithSimilarity.slice(0, limit);
+            } else {
+                filteredUsers = filteredUsers.slice(0, limit);
+            }
+
+            const result = filteredUsers.map(item => item.user);
+
+            if (result.length === 0) {
+                throw new NotFoundException('No users found with similar designations');
+            }
+
+            const payload = {
+                users: result,
+                page: +page + 1,
+            }
+
+            return payload;
         }
         catch (error) {
             throw new InternalServerErrorException(
-                error.message || 'Unable to get the user'
+                error.message || 'Unable to get users'
             );
         }
     }
