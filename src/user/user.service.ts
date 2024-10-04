@@ -84,4 +84,36 @@ export class UserService {
             );
         }
     }
+
+    async updateUser(id: string, updateData: Partial<User>) {
+        try {
+            const updatedUser = await this.userModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).exec();
+
+            if (!updatedUser) {
+                throw new NotFoundException('User not found');
+            }
+
+            return updatedUser;
+        } catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to update the user'
+            );
+        }
+    }
+
+    async deleteUser(id: string) {
+        try {
+            const deletedUser = await this.userModel.findByIdAndDelete(id).exec();
+
+            if (!deletedUser) {
+                throw new NotFoundException('User not found');
+            }
+
+            return { message: 'User successfully deleted' };
+        } catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to delete the user'
+            );
+        }
+    }
 }
