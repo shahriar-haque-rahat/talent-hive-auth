@@ -31,6 +31,9 @@ export class User extends Document {
     designation?: string;
 
     @Prop({ default: null })
+    phoneNumber?: number;
+
+    @Prop({ default: null })
     about?: string;
 
     @Prop({ default: null })
