@@ -43,7 +43,7 @@ export class User extends Document {
     linkedInLink?: string;
 
     @Prop({ default: null })
-    cvLink?: string;
+    resumeLink?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
