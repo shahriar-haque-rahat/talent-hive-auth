@@ -24,7 +24,7 @@ export class UserService {
 
             const users = await this.userModel
                 .find({ _id: { $ne: id } })
-                .select('-password')
+                .select('-password -')
                 .skip(skip)
                 .limit(limit)
                 .exec();
@@ -70,7 +70,7 @@ export class UserService {
 
     async findUserById(id: string) {
         try {
-            const user = await this.userModel.findById(id).select('-password').exec();
+            const user = await this.userModel.findById(id).select('-password -__v').exec();
 
             if (!user) {
                 throw new NotFoundException('User not found');
