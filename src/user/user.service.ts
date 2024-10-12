@@ -24,7 +24,7 @@ export class UserService {
 
             const users = await this.userModel
                 .find({ _id: { $ne: id } })
-                .select('-password -')
+                .select('-password -__V')
                 .skip(skip)
                 .limit(limit)
                 .exec();
