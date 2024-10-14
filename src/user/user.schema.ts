@@ -45,8 +45,8 @@ export class User extends Document {
     @Prop({ default: null })
     resumeLink?: string;
 
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-    connections?: Types.ObjectId[];
+    @Prop({ default: 0 })
+    connectionsCount: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
