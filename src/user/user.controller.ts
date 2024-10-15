@@ -15,6 +15,11 @@ export class UserController {
         return this.userService.findAllUser(id, limit, page);
     }
 
+    @Get('suggestion-user/:id')
+    async getSuggestions(@Param('id') id: string) {
+        return this.userService.findSuggestionUser(id);
+    }
+
     @Get(':id')
     findUserById(@Param('id') id: string) {
         return this.userService.findUserById(id);
