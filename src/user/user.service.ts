@@ -128,6 +128,41 @@ export class UserService {
         }
     }
 
+    async findUserDetails(loggedInUserId: string, id: string) {
+        try {
+            const user = await this.userModel
+                .findById(id)
+                .select('-password -__v')
+                .exec();
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            };
+
+            const response = await axios.post(
+                `${process.env.PUBLIC_SERVER_URL}/connection-request/check-status`,
+                {
+                    loggedInUserId,
+                    userIds: [id],
+                }
+            );
+
+            const relationshipStatus = response.data?.[0]?.status || 'no_relationship';
+
+            const userWithRelationship = {
+                ...user.toObject(),
+                relationshipStatus,
+            };
+
+            return userWithRelationship;
+        }
+        catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to get the user'
+            );
+        }
+    }
+
     async findUserById(id: string) {
         try {
             const user = await this.userModel.findById(id).select('-password -__v').exec();

@@ -20,6 +20,14 @@ export class UserController {
         return this.userService.findSuggestionUser(id);
     }
 
+    @Get(':loggedInUserId/:id')
+    findUserDetails(
+        @Param('loggedInUserId') loggedInUserId: string,
+        @Param('id') id: string,
+    ) {
+        return this.userService.findUserDetails(loggedInUserId, id);
+    }
+
     @Get(':id')
     findUserById(@Param('id') id: string) {
         return this.userService.findUserById(id);
