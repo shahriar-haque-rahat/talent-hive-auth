@@ -1,9 +1,18 @@
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+    BadRequestException,
+    Inject,
+    Injectable,
+    InternalServerErrorException,
+    NotFoundException,
+    UnauthorizedException
+} from '@nestjs/common';
 import { UserRegisterDto } from './dto/user-register.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { JwtService } from '@nestjs/jwt';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/user/user.schema';
 import { Session } from 'src/types/auth.types';
 import { UserVerifyDto } from './dto/user-verify.dto';
 import { UserRefreshDto } from './dto/user-refresh.dto';
@@ -12,9 +21,7 @@ import { UserLoginDto } from './dto/user-login.dto';
 import { VerifyRequest } from 'src/middleware/verify.middleware';
 import { UserForgotPasswordDto } from './dto/user-forgotpassword.dto';
 import { UserResetPasswordDto } from './dto/user-resertpassword.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User } from 'src/user/user.schema';
+import { AuthCache } from './auth.schema';
 
 @Injectable()
 export class AuthService {
@@ -23,18 +30,18 @@ export class AuthService {
 
     constructor(
         @InjectModel(User.name) private userModel: Model<User>,
-        @Inject(CACHE_MANAGER) private cacheManager: Cache,
+        @InjectModel(AuthCache.name) private authCacheModel: Model<AuthCache>,
         private jwtService: JwtService,
         private mailerService: MailerService
     ) { }
 
     private async sendMail(message: string, to: string, subject?: string) {
-        this.mailerService.sendMail({
+        await this.mailerService.sendMail({
             from: 'Shahriar Haque <shahriar.haque.1011@gmail.com>',
             to,
             subject: subject || 'Email Confirmation!',
             text: message,
-        })
+        });
     }
 
     private accessAndRefreshToken(payload: Session) {
@@ -47,24 +54,17 @@ export class AuthService {
             });
 
             return { success: true, accessToken, refreshToken };
-        }
-        catch (error) {
+        } catch (error) {
             throw new BadRequestException('Invalid token');
         }
     }
 
-    private async saveToken(key: number | string, accessToken: string, refreshToken: string) {
-        await this.cacheManager.set(
-            `${key}_access_token`,
-            accessToken,
-            this.hourExpire,
-        );
-
-        await this.cacheManager.set(
-            `${key}_refresh_token`,
-            refreshToken,
-            this.sevenDaysExpire,
-        );
+    private async saveToken(userId: string, accessToken: string, refreshToken: string) {
+        await this.authCacheModel.findOneAndUpdate(
+            { userId },
+            { accessToken, refreshToken },
+            { upsert: true, new: true }
+        ).exec();
     }
 
     async session(session: Session) {
@@ -72,15 +72,15 @@ export class AuthService {
             const { id } = session || {};
             const user = await this.userModel.findById(id).exec();
 
-            if (user) {
+            if (!user) {
                 throw new NotFoundException('User not found');
             }
 
             return { success: true, data: user };
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
-                error.message || 'Failed to get session data');
+                error.message || 'Failed to get session data'
+            );
         }
     }
 
@@ -104,24 +104,24 @@ export class AuthService {
                 password: hashedPass,
                 ...restUser,
             });
-    
+
             const saveResponse = await user.save();
 
             const payload = {
                 id: saveResponse?.id,
                 email,
                 fullName: saveResponse?.fullName
-            }
+            };
 
             const token = await this.jwtService.signAsync(payload, {
                 expiresIn: '1h',
             });
 
-            await this.cacheManager.set(
-                `${saveResponse?.id}_email_activation_token`,
-                token,
-                this.hourExpire,
-            );
+            await this.authCacheModel.findOneAndUpdate(
+                { userId: saveResponse?.id },
+                { emailActivationToken: token },
+                { upsert: true }
+            ).exec();
 
             await this.sendMail(
                 `Click to confirm ${process.env.ORIGIN_URL}/login?token=${token}`,
@@ -129,8 +129,7 @@ export class AuthService {
             );
 
             return saveResponse;
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
                 error.message || 'Failed to register'
             );
@@ -147,7 +146,7 @@ export class AuthService {
 
             if (!decoded) {
                 throw new UnauthorizedException('Unauthorize access');
-            };
+            }
 
             const { id } = decoded;
 
@@ -157,19 +156,19 @@ export class AuthService {
 
             if (isExpired) {
                 throw new UnauthorizedException('Token Expired!');
-            };
+            }
 
-            const redisToken = await this.cacheManager.get(`${id}_email_activation_token`);
+            const cacheData = await this.authCacheModel.findOne({ userId: id }).exec();
 
-            if (!redisToken || token != redisToken) {
+            if (!cacheData || token !== cacheData.emailActivationToken) {
                 throw new UnauthorizedException('Unauthorize access');
-            };
+            }
 
             const user = await this.userModel.findById(id).exec();
 
-            if (!user?.status && user?.status === 'active') {
+            if (!user || user.status === 'active') {
                 throw new BadRequestException('User already active');
-            };
+            }
 
             await this.userModel.findByIdAndUpdate(id, { status: 'active' }).exec();
 
@@ -183,13 +182,12 @@ export class AuthService {
 
             await this.saveToken(decoded?.id, accessToken, refreshToken);
 
-            await this.cacheManager.del(`${id}_email_activation_token`);
+            await this.authCacheModel.deleteOne({ userId: id }).exec();
 
             return { success: true, accessToken, refreshToken, user: payload };
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
-                error.message || 'Failed to account active'
+                error.message || 'Failed to activate account'
             );
         }
     }
@@ -204,22 +202,19 @@ export class AuthService {
 
             if (!decoded) {
                 throw new UnauthorizedException('Unauthorize Access');
-            };
+            }
 
-            const refreshTokenFromCache = await this.cacheManager.get(
-                `${decoded.id}_refresh_token`,
-            );
+            const cacheData = await this.authCacheModel.findOne({ userId: decoded.id }).exec();
 
-            if (!refreshTokenFromCache || refreshToken !== refreshTokenFromCache) {
+            if (!cacheData || refreshToken !== cacheData.refreshToken) {
                 throw new UnauthorizedException('Unauthorize Access');
-            };
+            }
 
-            const decodedFromCache = await this.jwtService.verify(refreshTokenFromCache, {
+            const decodedFromCache = await this.jwtService.verify(cacheData.refreshToken, {
                 secret: jwtConfig.secret,
             });
 
             const currentDate = Math.floor(Date.now() / 1000);
-
             const isExpired = decodedFromCache?.exp < currentDate;
 
             if (!decodedFromCache || isExpired) {
@@ -234,11 +229,13 @@ export class AuthService {
 
             const { accessToken, refreshToken: newRefreshToken } = this.accessAndRefreshToken(payload);
 
+            await this.saveToken(decodedFromCache?.id, accessToken, newRefreshToken);
+
             return { success: true, accessToken, refreshToken: newRefreshToken };
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
-                error.message || 'Failed to refresh token');
+                error.message || 'Failed to refresh token'
+            );
         }
     }
 
@@ -250,17 +247,17 @@ export class AuthService {
 
             if (!user) {
                 throw new NotFoundException('User not found');
-            };
+            }
 
-            if (user.status != 'active') {
+            if (user.status !== 'active') {
                 throw new UnauthorizedException('User not active!');
-            };
+            }
 
             const correctPassword = await bcrypt.compare(password, user.password);
 
             if (!correctPassword) {
                 throw new UnauthorizedException('Invalid password');
-            };
+            }
 
             const payload: Session = {
                 id: `${user.id}`,
@@ -273,8 +270,7 @@ export class AuthService {
             await this.saveToken(user.id, accessToken, refreshToken);
 
             return { success: true, accessToken, refreshToken };
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
                 error.message || 'Failed to login'
             );
@@ -284,13 +280,11 @@ export class AuthService {
     async logout(req: VerifyRequest) {
         try {
             const user: Session = req.user;
-
-            await this.cacheManager.del(`${user?.id}_access_token`);
-            await this.cacheManager.del(`${user?.id}_refresh_token`);
+console.log(user)
+            await this.authCacheModel.deleteOne({ userId: user?.id }).exec();
 
             return { success: true, status: true };
-        }
-        catch (error) {
+        } catch (error) {
             throw new InternalServerErrorException(
                 error.message || 'Failed to logout'
             );
@@ -305,11 +299,11 @@ export class AuthService {
 
             if (!user) {
                 throw new NotFoundException('User does not exist.');
-            };
+            }
 
             if (user?.status !== 'active') {
                 throw new BadRequestException('User account not activated!');
-            };
+            }
 
             const payload = {
                 id: user.id,
@@ -320,16 +314,16 @@ export class AuthService {
                 expiresIn: '1h'
             });
 
-            await this.cacheManager.set(
-                `${user.id}_reset_password_token`,
-                token,
-                this.hourExpire
-            );
+            await this.authCacheModel.findOneAndUpdate(
+                { userId: user.id },
+                { resetPasswordToken: token },
+                { upsert: true }
+            ).exec();
 
             const resetPasswordLink = `${process.env.ORIGIN_URL}/reset-password?token=${token}`;
 
             await this.sendMail(
-                `Click the link below to reset you password = ${resetPasswordLink}`,
+                `Click the link below to reset your password = ${resetPasswordLink}`,
                 email,
                 `Reset Password`
             );
@@ -338,8 +332,7 @@ export class AuthService {
                 success: true,
                 message: `Password reset link sent`
             };
-        }
-        catch (error: any) {
+        } catch (error) {
             throw new InternalServerErrorException(
                 error.message || 'Failed to process password reset request',
             );
@@ -355,24 +348,23 @@ export class AuthService {
             });
 
             const currentDate = Math.floor(Date.now() / 1000);
-
             const isExpired = decoded.exp < currentDate;
 
             if (isExpired) {
                 throw new BadRequestException('Token expired');
-            };
+            }
 
-            const tokenFromCache = await this.cacheManager.get(`${decoded.id}_reset_password_token`);
+            const cacheData = await this.authCacheModel.findOne({ userId: decoded.id }).exec();
 
-            if (tokenFromCache != token) {
+            if (!cacheData || token !== cacheData.resetPasswordToken) {
                 throw new BadRequestException('Invalid token');
-            };
+            }
 
             const user = await this.userModel.findById(decoded.id).exec();
 
             if (!user) {
                 throw new NotFoundException('User not found.');
-            };
+            }
 
             const hashedPass = await bcrypt.hash(newPassword, 10);
 
@@ -381,17 +373,16 @@ export class AuthService {
                 updatedAt: new Date()
             }).exec();
 
-            await this.cacheManager.del(`${decoded.id}_reset_password_token`);
+            await this.authCacheModel.deleteOne({ userId: decoded.id }).exec();
 
             return {
                 success: true,
                 message: 'Password changed'
             };
-        }
-        catch (error: any) {
+        } catch (error) {
             throw new InternalServerErrorException(
                 error.message || 'Failed to reset password',
             );
         }
     }
-};
+}
