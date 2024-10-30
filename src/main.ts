@@ -31,6 +31,8 @@ async function bootstrap() {
   await app.init();
 }
 
-bootstrap();
+bootstrap().catch(err => {
+  console.error('NestJS application failed to start:', err);
+});
 
 export default server;
