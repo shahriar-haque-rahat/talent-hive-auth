@@ -11,6 +11,21 @@ export class UserService {
         @InjectModel(User.name) private userModel: Model<User>,
     ) { }
 
+    async searchByName(name: string) {
+        try {
+            const users = await this.userModel
+                .find({ fullName: { $regex: name, $options: 'i' } })
+                .select('fullName profileImage')
+                .exec();
+
+            return users;
+        } catch (error) {
+            throw new InternalServerErrorException(
+                error.message || 'Unable to get users'
+            );
+        }
+    }
+
     async findAllUser(id: string, limit: number, page: number) {
         try {
             let result = [];

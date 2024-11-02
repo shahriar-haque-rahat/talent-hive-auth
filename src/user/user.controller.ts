@@ -6,6 +6,13 @@ import { User } from './user.schema';
 export class UserController {
     constructor(private readonly userService: UserService) { }
 
+    @Get('search-by-name')
+    async searchByName(
+        @Query('name') name: string
+    ) {
+        return this.userService.searchByName(name);
+    }
+
     @Get('all-user/:id')
     findAllUser(
         @Param('id') id: string,
