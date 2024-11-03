@@ -124,7 +124,7 @@ export class AuthService {
             ).exec();
 
             await this.sendMail(
-                `Click to confirm ${process.env.ORIGIN_URL}/login?token=${token}`,
+                `Click to confirm ${process.env.CLIENT_URL}/login?token=${token}`,
                 email
             );
 
@@ -280,7 +280,7 @@ export class AuthService {
     async logout(req: VerifyRequest) {
         try {
             const user: Session = req.user;
-console.log(user)
+
             await this.authCacheModel.deleteOne({ userId: user?.id }).exec();
 
             return { success: true, status: true };
@@ -320,7 +320,7 @@ console.log(user)
                 { upsert: true }
             ).exec();
 
-            const resetPasswordLink = `${process.env.ORIGIN_URL}/reset-password?token=${token}`;
+            const resetPasswordLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
 
             await this.sendMail(
                 `Click the link below to reset your password = ${resetPasswordLink}`,
