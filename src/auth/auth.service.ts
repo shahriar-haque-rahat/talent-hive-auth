@@ -37,10 +37,25 @@ export class AuthService {
 
     private async sendMail(message: string, to: string, subject?: string) {
         await this.mailerService.sendMail({
-            from: 'Shahriar Haque <shahriar.haque.1011@gmail.com>',
+            from: process.env.EMAIL_FROM,
             to,
             subject: subject || 'Email Confirmation!',
-            text: message,
+            text: `
+            Hello,
+
+            Thank you for registering! We're excited to have you join our community.
+
+            To complete your registration and activate your account, please click on the link below:
+
+            ${message}
+
+            If you did not request this registration, please ignore this email. Your account will remain inactive.
+
+            If you have any questions or need help, feel free to reach out to our support team at ${process.env.EMAIL_FROM}.
+
+            Best regards,  
+            The Talent Hive Team  
+            `,
         });
     }
 
