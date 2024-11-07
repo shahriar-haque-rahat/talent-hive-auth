@@ -41,20 +41,20 @@ export class AuthService {
             to,
             subject: subject || 'Email Confirmation!',
             text: `
-            Hello,
+Hello,
 
-            Thank you for registering! We're excited to have you join our community.
+Thank you for registering! We're excited to have you join our community.
 
-            To complete your registration and activate your account, please click on the link below:
+To complete your registration and activate your account, please click on the link below:
 
-            ${message}
+${message}
 
-            If you did not request this registration, please ignore this email. Your account will remain inactive.
+If you did not request this registration, please ignore this email. Your account will remain inactive.
 
-            If you have any questions or need help, feel free to reach out to our support team at ${process.env.EMAIL_FROM}.
+If you have any questions or need help, feel free to reach out to our support team at ${process.env.EMAIL_FROM}.
 
-            Best regards,  
-            The Talent Hive Team  
+Best regards,  
+The Talent Hive Team  
             `,
         });
     }
