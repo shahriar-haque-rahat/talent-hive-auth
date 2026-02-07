@@ -4,24 +4,32 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AppModule } from "../src/app.module";
 
-let cachedHandler: any;
+let cached: any;
 
 async function bootstrap() {
-  const expressApp = express();
+  try {
+    const expressApp = express();
+    const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
 
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+    // copy any main.ts config here, e.g.
+    // app.enableCors();
+    // app.setGlobalPrefix("api");
 
-  // If you had these in main.ts, copy them here too:
-  // app.enableCors();
-  // app.setGlobalPrefix("api");
-
-  await app.init();
-  return serverless(expressApp);
+    await app.init();
+    return serverless(expressApp);
+  } catch (err) {
+    console.error("Nest bootstrap failed:", err);
+    throw err;
+  }
 }
 
 export default async function handler(req: any, res: any) {
-  if (!cachedHandler) {
-    cachedHandler = await bootstrap();
+  try {
+    if (!cached) cached = await bootstrap();
+    return cached(req, res);
+  } catch (err) {
+    console.error("Handler failed:", err);
+    res.statusCode = 500;
+    res.end("Internal Server Error");
   }
-  return cachedHandler(req, res);
 }
